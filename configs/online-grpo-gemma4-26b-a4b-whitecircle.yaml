@@ -1,0 +1,70 @@
+# Online GRPO (RLVR) — Gemma-4 26B-A4B on OntologyGuard with accuracy + format + White Circle policy rewards.
+# Start vLLM on GPU 0 with --weight-transfer-config '{"backend":"nccl"}' --moe-backend triton, then:
+#   WHITECIRCLE_API_KEY=wc-... CUDA_VISIBLE_DEVICES=1,2 halo launch grpo/online configs/online-grpo-gemma4-26b-a4b-whitecircle.yaml -n 2
+
+# --- Model ---
+model_name_or_path: checkpoints/sft-gemma4-26b-a4b-ontology
+attn_implementation: sdpa
+moe_balancing: none
+
+# --- Parallelism ---
+expert_parallel_size: 2
+
+# --- Dataset ---
+dataset: data/ontology_guard/grpo_online.jsonl
+test_size: 0.05
+prompt_field: prompt
+answer_field: answer
+system_prompt: >-
+  Follow the schema instructions strictly. Output your final canonical decision JSON
+  wrapped inside \boxed{...} with sorted keys and no markdown commentary.
+
+# --- Rewards ---
+rewards:
+  - source: accuracy
+    weight: 1.0
+  - source: format
+    weight: 0.25
+    pattern: '\\boxed\{.+\}'
+  - source: whitecircle
+    name: ontology_safety
+    environment_id: your_environment_id
+    policies: [no_illegal_state_jump, enforce_hitl_escalation, require_high_impact_approval]
+    weight: 0.75
+    max_concurrency: 16
+
+# --- GRPO Hyperparameters ---
+beta: 0.02
+num_iterations: 1
+epsilon: 0.15
+scale_rewards: group
+num_generations: 8
+temperature: 1.0
+loss_type: grpo
+drop_degenerate_groups: true
+
+# --- Training ---
+per_device_train_batch_size: 2
+gradient_accumulation_steps: 4
+max_steps: 300
+gradient_checkpointing_kwargs:
+  use_reentrant: true
+learning_rate: 1.0e-06
+lr_scheduler_type: cosine
+warmup_steps: 15
+max_prompt_length: 2048
+max_completion_length: 1024
+
+# --- vLLM generation ---
+use_vllm: true
+vllm_mode: server
+vllm_server_host: 127.0.0.1
+
+# --- Output ---
+output_dir: checkpoints/online-grpo-gemma4-26b-a4b-whitecircle
+save_steps: 100
+save_only_model: true
+logging_steps: 1
+logging_first_step: true
+report_to: []
+log_completions: true

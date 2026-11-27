@@ -1,0 +1,54 @@
+# Gemma-4 26B-A4B SFT warmup on synthetic OntologyGuard trajectories.
+# Launch: torchrun --nproc_per_node=8 scripts/training/sft.py configs/sft-gemma4-26b-a4b-ontology.yaml
+
+# --- Model ---
+model_name_or_path: google/gemma-4-26B-A4B-it
+moe_balancing: none
+
+# --- Dataset ---
+dataset:
+  - data/ontology_guard/sft_all.jsonl
+conversation_field: messages
+test_size: 0.05
+
+# --- Parallelism & MoE precision ---
+expert_parallel_size: 8
+fp32_experts: true
+
+# --- Attention & kernels ---
+attn_implementation: sdpa
+packing: true
+max_length: 8192
+
+# --- Training ---
+per_device_train_batch_size: 1
+per_device_eval_batch_size: 1
+gradient_accumulation_steps: 8
+num_train_epochs: 2.0
+
+# --- Optimizer & LR schedule ---
+learning_rate: 5.0e-06
+lr_scheduler_type: cosine
+warmup_steps: 20
+
+# --- Checkpointing & evaluation ---
+save_steps: 250
+eval_strategy: steps
+eval_steps: 100
+save_total_limit: 2
+save_only_model: true
+output_dir: checkpoints/sft-gemma4-26b-a4b-ontology
+
+# --- Logging ---
+logging_steps: 1
+logging_first_step: true
+report_to: []
+remove_unused_columns: false
+dataloader_num_workers: 2
+
+# --- PEFT ---
+use_peft: false
+
+# --- Tokens & chat template ---
+assistant_message_template: "<|turn>model\n"
+pad_token: <pad>

@@ -1,0 +1,58 @@
+{
+  "dataset": "data/ontology_guard/grpo_eval.jsonl",
+  "limit_per_task": 5,
+  "total_sample_rows": 25,
+  "models": [
+    {
+      "model": "z-ai/glm-5.3-flash",
+      "backend": "openrouter",
+      "evaluated_rows": 25,
+      "errors": 0,
+      "mean_reward": 0.1227,
+      "boxed_format_rate": 0.16,
+      "latency_p50_ms": 2823.7,
+      "latency_p95_ms": 5968.0,
+      "task_means": {
+        "forge_treg_planner": 0.3333,
+        "jev_triage_hitl": 0.12,
+        "ontology_command_compiler": 0.16,
+        "opposite_family_verifier": 0.0,
+        "voice_front_desk": 0.0
+      }
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash",
+      "backend": "openrouter",
+      "evaluated_rows": 25,
+      "errors": 0,
+      "mean_reward": 0.0,
+      "boxed_format_rate": 0.0,
+      "latency_p50_ms": 2663.0,
+      "latency_p95_ms": 5319.3,
+      "task_means": {
+        "forge_treg_planner": 0.0,
+        "jev_triage_hitl": 0.0,
+        "ontology_command_compiler": 0.0,
+        "opposite_family_verifier": 0.0,
+        "voice_front_desk": 0.0
+      }
+    },
+    {
+      "model": "google/gemini-3.1-flash-lite",
+      "backend": "openrouter",
+      "evaluated_rows": 25,
+      "errors": 0,
+      "mean_reward": 0.5059,
+      "boxed_format_rate": 1.0,
+      "latency_p50_ms": 901.7,
+      "latency_p95_ms": 1188.0,
+      "task_means": {
+        "forge_treg_planner": 0.8666,
+        "jev_triage_hitl": 0.52,
+        "ontology_command_compiler": 0.8,
+        "opposite_family_verifier": 0.0,
+        "voice_front_desk": 0.3429
+      }
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-"""Self-contained verification tests for OntologyGuard Halo submission repo."""
+"""Self-contained verification tests for OntologyGuard 10K+ Halo suite & live runner."""
 from __future__ import annotations
 
 import json
@@ -9,7 +9,12 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from eval_ontology_guard import evaluate_live_dataset, score_completion, verify_dataset_oracle  # noqa: E402
+from eval_ontology_guard import (  # noqa: E402
+    render_markdown_table,
+    run_live_benchmark,
+    score_completion,
+    verify_dataset_oracle,
+)
 
 
 def test_halo_configs_and_policies_valid():
@@ -24,31 +29,58 @@ def test_halo_configs_and_policies_valid():
     assert len(policies["policies"]) == 3
 
 
-def test_dataset_oracle_passes_10k_plus_across_5_tasks_and_zero_leak_eval():
-    train_report = verify_dataset_oracle(ROOT / "data" / "ontology_guard" / "grpo_online.jsonl")
-    eval_report = verify_dataset_oracle(ROOT / "data" / "ontology_guard" / "grpo_eval.jsonl")
-
-    assert train_report["rows"] + eval_report["rows"] >= 10_000
-    assert train_report["oracle_mean_score"] == 1.0
-    assert train_report["min_score"] == 1.0
-    assert eval_report["oracle_mean_score"] == 1.0
-    assert eval_report["min_score"] == 1.0
-    assert len(train_report["per_task_counts"]) == 5
-    assert len(eval_report["per_task_counts"]) == 5
-
-    # Zero leakage between train and eval splits
-    train_groups = {
-        json.loads(line)["split_group"]
-        for line in (ROOT / "data" / "ontology_guard" / "grpo_online.jsonl").read_text(encoding="utf-8").splitlines()
+def test_10k_train_and_eval_holdout_oracle_and_disjoint():
+    train_path = ROOT / "data" / "ontology_guard" / "grpo_online.jsonl"
+    eval_path = ROOT / "data" / "ontology_guard" / "grpo_eval.jsonl"
+    train_rep = verify_dataset_oracle(train_path)
+    eval_rep = verify_dataset_oracle(eval_path)
+    assert train_rep["rows"] + eval_rep["rows"] >= 10000
+    assert train_rep["oracle_mean_score"] == 1.0
+    assert eval_rep["oracle_mean_score"] == 1.0
+    assert set(eval_rep["by_task"].keys()) == {
+        "jev_triage_hitl",
+        "ontology_command_compiler",
+        "voice_front_desk",
+        "forge_treg_planner",
+        "opposite_family_verifier",
     }
-    eval_groups = {
-        json.loads(line)["split_group"]
-        for line in (ROOT / "data" / "ontology_guard" / "grpo_eval.jsonl").read_text(encoding="utf-8").splitlines()
+    train_prompts = {
+        json.dumps(json.loads(ln)["prompt"], sort_keys=True)
+        for ln in train_path.read_text(encoding="utf-8").splitlines()
+        if ln.strip()
     }
-    assert not (train_groups & eval_groups)
+    eval_prompts = {
+        json.dumps(json.loads(ln)["prompt"], sort_keys=True)
+        for ln in eval_path.read_text(encoding="utf-8").splitlines()
+        if ln.strip()
+    }
+    assert train_prompts.isdisjoint(eval_prompts)
 
 
-def test_scorer_penalizes_safety_regressions_all_tasks():
+def test_live_benchmark_runner_with_injected_caller():
+    def fake_caller(_url, _tok, model, _msgs, gt):
+        if model == "perfect-specialist":
+            return f"\\boxed{{{json.dumps(gt, sort_keys=True)}}}", 42.0, {}
+        return '{"wrong": true}', 120.0, {}
+
+    report = run_live_benchmark(
+        dataset_path=ROOT / "data" / "ontology_guard" / "grpo_eval.jsonl",
+        backend="vllm",
+        models=["perfect-specialist", "untrained-baseline"],
+        limit_per_task=2,
+        concurrency=2,
+        call_fn=fake_caller,
+    )
+    assert report["total_sample_rows"] == 10
+    by_model = {m["model"]: m for m in report["models"]}
+    assert by_model["perfect-specialist"]["mean_reward"] == 1.0
+    assert by_model["perfect-specialist"]["boxed_format_rate"] == 1.0
+    assert by_model["untrained-baseline"]["mean_reward"] < 0.2
+    md = render_markdown_table(report)
+    assert "perfect-specialist" in md
+
+
+def test_safety_penalties_across_all_five_tasks():
     assert (
         score_completion(
             "ontology_command_compiler",
@@ -57,7 +89,6 @@ def test_scorer_penalizes_safety_regressions_all_tasks():
         )
         == 0.0
     )
-
     assert (
         score_completion(
             "jev_triage_hitl",
@@ -66,49 +97,19 @@ def test_scorer_penalizes_safety_regressions_all_tasks():
         )
         == 0.0
     )
-
     assert (
         score_completion(
-            "voice_front_desk_intake",
-            '```json\n{"requires_hitl":false,"trust_zone":"commercial"}\n```',
-            {"requires_hitl": True, "trust_zone": "phi"},
+            "voice_front_desk",
+            '\\boxed{"trade":"plumbing","requires_hitl":false}',
+            {"trade": "plumbing", "requires_hitl": True},
         )
         == 0.0
     )
-
     assert (
         score_completion(
             "forge_treg_planner",
-            '\\boxed{"browser_lane":"browser_use_cloud","requires_human_approval":false}',
-            {"browser_lane": "blocked_phi_fence", "requires_human_approval": True},
+            '\\boxed{"vertical_id":"clinic","refuse_unverified_metrics":false,"requires_baa_gate":false}',
+            {"vertical_id": "clinic", "refuse_unverified_metrics": True, "requires_baa_gate": True},
         )
         == 0.0
     )
-
-
-def test_live_eval_runner_aggregates_metrics_and_costs():
-    dataset = ROOT / "data" / "ontology_guard" / "grpo_eval.jsonl"
-    first_rows = [json.loads(l) for l in dataset.read_text(encoding="utf-8").splitlines()[:15]]
-    answers_by_prompt = {r["prompt"][1]["content"]: r["answer"] for r in first_rows}
-
-    def fake_transport(*, endpoint: str, api_key: str, model: str, messages: list[dict[str, str]]) -> dict:
-        prompt_text = messages[1]["content"]
-        ans = answers_by_prompt.get(prompt_text, "{}")
-        return {
-            "choices": [{"message": {"content": f"\\boxed{{{ans}}}"}}],
-            "usage": {"cost": 0.001},
-        }
-
-    report = evaluate_live_dataset(
-        dataset,
-        model="mock/sol-baseline",
-        provider="openai",
-        api_key="test-key",
-        limit=10,
-        transport=fake_transport,
-    )
-    assert report["rows_evaluated"] == 10
-    assert report["schema_valid_rate"] == 1.0
-    assert report["error_count"] == 0
-    assert report["total_cost_usd"] == 0.01
-    assert report["mean_score"] >= 0.0

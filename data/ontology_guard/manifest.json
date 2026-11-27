@@ -1,37 +1,27 @@
 {
-  "adr": "ADR-291+ADR-292",
+  "suite": "OntologyGuard RLVR",
   "synthetic_only": true,
   "phi_included": false,
   "vertical_count": 24,
   "command_count": 11,
-  "forge_capability_count": 10,
-  "treg_family_count": 10,
-  "front_desk_persona_count": 24,
   "role_count": 147,
   "counts": {
-    "jev_triage_hitl": 2106,
-    "ontology_command_compiler": 3700,
-    "opposite_family_verifier": 1584,
-    "voice_front_desk_intake": 1120,
-    "forge_treg_planner": 2680
+    "jev_triage_hitl": 2940,
+    "ontology_command_compiler": 3535,
+    "voice_front_desk": 1750,
+    "forge_treg_planner": 720,
+    "opposite_family_verifier": 1200
   },
-  "splits": {
-    "train": 10076,
-    "eval": 1114
+  "split_counts": {
+    "train": 9124,
+    "eval": 1021
   },
-  "total_rows": 11190,
-  "source_hashes": {
-    "ontology-schema.ts": "e85f4fce95394316b586d71a5c9c7cc72891bd3795bce3020495ef63467a5a73",
-    "ontology-commands.ts": "df0461263e5064d7c36360ee57ce0325b288038acb5b1490e91ac127debef4c8",
-    "jack-roles.json": "8586fca3c6e624f4789c976ff5a50fd803ee0e3b42f7e1a93843986b53f92d5a",
-    "capabilities.ts": "d41b0d09e65a85168ce87cbb1ae513561660fe2ef55aa8e528a77bb48056be0a",
-    "vertical-personas.ts": "4bd8c1d695119369ed5d6cbc6767bcd66130a47ea019d53966ffdf3575f04acd"
-  },
+  "total_rows": 10145,
   "halo_targets": {
-    "jev_triage_hitl": "gemma4-e4b (or glm-5.3-flash)",
-    "ontology_command_compiler": "qwen3.8-27b / qwen3.8-flash-next",
-    "opposite_family_verifier": "nemotron-3.5-bolt-74b-a9b / gpt-oss-20b",
-    "voice_front_desk_intake": "gemma4-e4b / gpt-6.2-sol",
-    "forge_treg_planner": "qwen3.8-27b / claude-fable-5.2"
+    "jev_triage_hitl": "google/gemma-4-E4B-it (or z-ai/glm-5.3-flash)",
+    "ontology_command_compiler": "Qwen/Qwen3.8-Flash-Next (or google/gemma-4-26B-A4B-it)",
+    "voice_front_desk": "google/gemma-4-E4B-it / google/gemma-4-12B-it",
+    "forge_treg_planner": "google/gemma-4-26B-A4B-it",
+    "opposite_family_verifier": "nvidia/nemotron-3.5-bolt-74b-a9b / openai/gpt-oss-20b"
   }
 }

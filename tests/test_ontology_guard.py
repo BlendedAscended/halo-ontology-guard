@@ -19,7 +19,7 @@ from eval_ontology_guard import (  # noqa: E402
 
 def test_halo_configs_and_policies_valid():
     configs = sorted((ROOT / "configs").glob("*.yaml"))
-    assert len(configs) == 3
+    assert len(configs) == 4
     for cfg in configs:
         doc = yaml.safe_load(cfg.read_text(encoding="utf-8"))
         assert isinstance(doc, dict)

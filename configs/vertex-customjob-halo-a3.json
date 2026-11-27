@@ -1,0 +1,33 @@
+{
+  "displayName": "halo-ontology-guard-sft-a3-8xh100",
+  "jobSpec": {
+    "workerPoolSpecs": [
+      {
+        "machineSpec": {
+          "machineType": "a3-highgpu-8g",
+          "acceleratorType": "NVIDIA_H100_80GB",
+          "acceleratorCount": 8
+        },
+        "replicaCount": 1,
+        "diskSpec": {
+          "bootDiskType": "pd-ssd",
+          "bootDiskSizeGb": 500
+        },
+        "containerSpec": {
+          "imageUri": "public.ecr.aws/whitecircle/halo:blackwell",
+          "command": [
+            "bash",
+            "-lc"
+          ],
+          "args": [
+            "git clone https://github.com/BlendedAscended/halo-ontology-guard.git /workspace/ontology && cd /workspace/ontology && torchrun --nproc_per_node=8 /opt/halo/scripts/training/sft.py configs/sft-gemma4-26b-a4b-ontology.yaml"
+          ]
+        }
+      }
+    ],
+    "scheduling": {
+      "strategy": "FLEX_START",
+      "maxWaitDuration": "3600s"
+    }
+  }
+}

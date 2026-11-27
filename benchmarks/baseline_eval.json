@@ -1,57 +1,210 @@
 {
   "dataset": "data/ontology_guard/grpo_eval.jsonl",
-  "limit_per_task": 5,
-  "total_sample_rows": 25,
+  "limit_per_task": 6,
+  "total_sample_rows": 30,
   "models": [
     {
-      "model": "z-ai/glm-5.3-flash",
+      "model": "openai/gpt-6.2-sol",
       "backend": "openrouter",
-      "evaluated_rows": 25,
+      "evaluated_rows": 30,
       "errors": 0,
-      "mean_reward": 0.1227,
-      "boxed_format_rate": 0.16,
-      "latency_p50_ms": 2823.7,
-      "latency_p95_ms": 5968.0,
+      "mean_reward": 0.5359,
+      "boxed_format_rate": 1.0,
+      "latency_p50_ms": 2546.5,
+      "latency_p95_ms": 6282.4,
       "task_means": {
-        "forge_treg_planner": 0.3333,
-        "jev_triage_hitl": 0.12,
-        "ontology_command_compiler": 0.16,
-        "opposite_family_verifier": 0.0,
-        "voice_front_desk": 0.0
+        "forge_treg_planner": 0.8889,
+        "jev_triage_hitl": 0.5,
+        "ontology_command_compiler": 0.6,
+        "opposite_family_verifier": 0.3333,
+        "voice_front_desk": 0.3572
       }
     },
     {
-      "model": "deepseek/deepseek-v4.1-flash",
+      "model": "upstage/solar-mini-4-5",
       "backend": "openrouter",
-      "evaluated_rows": 25,
+      "evaluated_rows": 30,
       "errors": 0,
-      "mean_reward": 0.0,
-      "boxed_format_rate": 0.0,
-      "latency_p50_ms": 2663.0,
-      "latency_p95_ms": 5319.3,
+      "mean_reward": 0.4897,
+      "boxed_format_rate": 0.6,
+      "latency_p50_ms": 741.7,
+      "latency_p95_ms": 1464.9,
       "task_means": {
-        "forge_treg_planner": 0.0,
+        "forge_treg_planner": 0.8056,
+        "jev_triage_hitl": 0.4667,
+        "ontology_command_compiler": 0.5333,
+        "opposite_family_verifier": 0.3333,
+        "voice_front_desk": 0.3095
+      }
+    },
+    {
+      "model": "google/gemma-4-26b-a4b-it",
+      "backend": "openrouter",
+      "evaluated_rows": 30,
+      "errors": 0,
+      "mean_reward": 0.4827,
+      "boxed_format_rate": 1.0,
+      "latency_p50_ms": 875.5,
+      "latency_p95_ms": 3408.6,
+      "task_means": {
+        "forge_treg_planner": 0.6944,
+        "jev_triage_hitl": 0.5667,
+        "ontology_command_compiler": 0.5333,
+        "opposite_family_verifier": 0.3333,
+        "voice_front_desk": 0.2857
+      }
+    },
+    {
+      "model": "anthropic/claude-haiku-5.5",
+      "backend": "openrouter",
+      "evaluated_rows": 30,
+      "errors": 2,
+      "mean_reward": 0.4733,
+      "boxed_format_rate": 0.9333,
+      "latency_p50_ms": 2257.7,
+      "latency_p95_ms": 3130.0,
+      "task_means": {
+        "forge_treg_planner": 0.8333,
+        "jev_triage_hitl": 0.5,
+        "ontology_command_compiler": 0.5333,
+        "opposite_family_verifier": 0.1667,
+        "voice_front_desk": 0.3333
+      }
+    },
+    {
+      "model": "nvidia/nemotron-3.5-super-vl",
+      "backend": "openrouter",
+      "evaluated_rows": 30,
+      "errors": 0,
+      "mean_reward": 0.3902,
+      "boxed_format_rate": 0.7,
+      "latency_p50_ms": 4267.3,
+      "latency_p95_ms": 7446.7,
+      "task_means": {
+        "forge_treg_planner": 0.8889,
+        "jev_triage_hitl": 0.1,
+        "ontology_command_compiler": 0.5333,
+        "opposite_family_verifier": 0.1667,
+        "voice_front_desk": 0.2619
+      }
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash-1017",
+      "backend": "openrouter",
+      "evaluated_rows": 30,
+      "errors": 0,
+      "mean_reward": 0.3778,
+      "boxed_format_rate": 0.6667,
+      "latency_p50_ms": 6698.3,
+      "latency_p95_ms": 12961.7,
+      "task_means": {
+        "forge_treg_planner": 0.8889,
+        "jev_triage_hitl": 0.3333,
+        "ontology_command_compiler": 0.0,
+        "opposite_family_verifier": 0.3333,
+        "voice_front_desk": 0.3333
+      }
+    },
+    {
+      "model": "google/gemini-4-hydrogen",
+      "backend": "openrouter",
+      "evaluated_rows": 30,
+      "errors": 0,
+      "mean_reward": 0.3411,
+      "boxed_format_rate": 0.5667,
+      "latency_p50_ms": 7863.5,
+      "latency_p95_ms": 10423.9,
+      "task_means": {
+        "forge_treg_planner": 0.7222,
+        "jev_triage_hitl": 0.1,
+        "ontology_command_compiler": 0.1333,
+        "opposite_family_verifier": 0.5833,
+        "voice_front_desk": 0.1667
+      }
+    },
+    {
+      "model": "meta/muse-ember",
+      "backend": "openrouter",
+      "evaluated_rows": 30,
+      "errors": 0,
+      "mean_reward": 0.3221,
+      "boxed_format_rate": 0.4667,
+      "latency_p50_ms": 4406.8,
+      "latency_p95_ms": 6767.7,
+      "task_means": {
+        "forge_treg_planner": 0.8889,
+        "jev_triage_hitl": 0.1,
+        "ontology_command_compiler": 0.1333,
+        "opposite_family_verifier": 0.4167,
+        "voice_front_desk": 0.0714
+      }
+    },
+    {
+      "model": "qwen/qwen3.8-flash",
+      "backend": "openrouter",
+      "evaluated_rows": 30,
+      "errors": 0,
+      "mean_reward": 0.2798,
+      "boxed_format_rate": 0.4333,
+      "latency_p50_ms": 16077.3,
+      "latency_p95_ms": 29274.4,
+      "task_means": {
+        "forge_treg_planner": 0.6944,
+        "jev_triage_hitl": 0.1667,
+        "ontology_command_compiler": 0.1333,
+        "opposite_family_verifier": 0.1667,
+        "voice_front_desk": 0.2381
+      }
+    },
+    {
+      "model": "inclusionai/lingsante-3.1-air-vl",
+      "backend": "openrouter",
+      "evaluated_rows": 30,
+      "errors": 0,
+      "mean_reward": 0.274,
+      "boxed_format_rate": 0.6333,
+      "latency_p50_ms": 11193.0,
+      "latency_p95_ms": 18210.9,
+      "task_means": {
+        "forge_treg_planner": 0.5555,
+        "jev_triage_hitl": 0.2333,
+        "ontology_command_compiler": 0.2,
+        "opposite_family_verifier": 0.3333,
+        "voice_front_desk": 0.0476
+      }
+    },
+    {
+      "model": "thinkingmachines/inkling-2-small",
+      "backend": "openrouter",
+      "evaluated_rows": 30,
+      "errors": 0,
+      "mean_reward": 0.2144,
+      "boxed_format_rate": 0.3667,
+      "latency_p50_ms": 6377.5,
+      "latency_p95_ms": 15534.6,
+      "task_means": {
+        "forge_treg_planner": 0.3055,
+        "jev_triage_hitl": 0.1,
+        "ontology_command_compiler": 0.0,
+        "opposite_family_verifier": 0.5,
+        "voice_front_desk": 0.1667
+      }
+    },
+    {
+      "model": "thinkingmachines/inkling-2-mini",
+      "backend": "openrouter",
+      "evaluated_rows": 30,
+      "errors": 0,
+      "mean_reward": 0.0691,
+      "boxed_format_rate": 0.2667,
+      "latency_p50_ms": 7705.0,
+      "latency_p95_ms": 15969.7,
+      "task_means": {
+        "forge_treg_planner": 0.1667,
         "jev_triage_hitl": 0.0,
         "ontology_command_compiler": 0.0,
-        "opposite_family_verifier": 0.0,
-        "voice_front_desk": 0.0
-      }
-    },
-    {
-      "model": "google/gemini-3.1-flash-lite",
-      "backend": "openrouter",
-      "evaluated_rows": 25,
-      "errors": 0,
-      "mean_reward": 0.5059,
-      "boxed_format_rate": 1.0,
-      "latency_p50_ms": 901.7,
-      "latency_p95_ms": 1188.0,
-      "task_means": {
-        "forge_treg_planner": 0.8666,
-        "jev_triage_hitl": 0.52,
-        "ontology_command_compiler": 0.8,
-        "opposite_family_verifier": 0.0,
-        "voice_front_desk": 0.3429
+        "opposite_family_verifier": 0.0833,
+        "voice_front_desk": 0.0953
       }
     }
   ]

@@ -114,7 +114,7 @@ def verify_dataset_oracle(dataset_path: Path) -> dict[str, Any]:
     }
 
 
-def _resolve_api_credentials(backend: str, env_file: Path | None = None) -> tuple[str, str]:
+def _resolve_api_credentials(backend: str, env_file: Path | None = None) -> tuple[str, str, dict[str, str]]:
     if backend == "openrouter":
         key = os.environ.get("OPENROUTER_API_KEY", "").strip()
         if not key and env_file and env_file.is_file():
@@ -124,12 +124,12 @@ def _resolve_api_credentials(backend: str, env_file: Path | None = None) -> tupl
                     break
         if not key:
             raise RuntimeError("OPENROUTER_API_KEY not set in environment or --env-file")
-        return "https://openrouter.ai/api/v1/chat/completions", key
+        return "https://openrouter.ai/api/v1/chat/completions", key, {}
 
     if backend == "vllm":
         base = os.environ.get("VLLM_BASE_URL", "http://127.0.0.1:8000/v1/chat/completions")
         key = os.environ.get("VLLM_API_KEY", "EMPTY")
-        return base, key
+        return base, key, {}
 
     if backend == "vertex":
         project = os.environ.get("GOOGLE_CLOUD_PROJECT", "").strip()
@@ -139,7 +139,7 @@ def _resolve_api_credentials(backend: str, env_file: Path | None = None) -> tupl
         tok = subprocess.check_output(["gcloud", "auth", "print-access-token"], text=True, timeout=10).strip()
         host = "aiplatform.googleapis.com" if location == "global" else f"{location}-aiplatform.googleapis.com"
         url = f"https://{host}/v1/projects/{project}/locations/{location}/endpoints/openapi/chat/completions"
-        return url, tok
+        return url, tok, {"x-goog-user-project": project}
 
     raise ValueError(f"Unsupported backend: {backend}")
 
@@ -150,7 +150,9 @@ def _call_chat_completion(
     model: str,
     messages: list[dict[str, str]],
     ground_truth: dict[str, Any],
-    timeout_s: float = 45.0,
+    timeout_s: float = 60.0,
+    max_tokens: int = 1536,
+    extra_headers: dict[str, str] | None = None,
 ) -> tuple[str, float, dict[str, Any]]:
     schema_hint = (
         f"\nRequired exact JSON keys: {sorted(ground_truth.keys())}. "
@@ -164,15 +166,18 @@ def _call_chat_completion(
         "model": model,
         "messages": augmented,
         "temperature": 0.0,
-        "max_tokens": 512,
+        "max_tokens": max_tokens,
     }
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    if extra_headers:
+        headers.update(extra_headers)
     req = urllib.request.Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        },
+        headers=headers,
         method="POST",
     )
     t0 = time.perf_counter()
@@ -205,16 +210,22 @@ def run_live_benchmark(
     backend: str,
     models: list[str],
     limit_per_task: int = 6,
-    concurrency: int = 4,
+    concurrency: int = 8,
+    max_tokens: int = 1536,
     env_file: Path | None = None,
     call_fn=None,
 ) -> dict[str, Any]:
-    url, token = ("mock://local", "mock") if call_fn is not None else _resolve_api_credentials(backend, env_file)
-    caller = call_fn or _call_chat_completion
+    url, token, extra_headers = (
+        ("mock://local", "mock", {}) if call_fn is not None else _resolve_api_credentials(backend, env_file)
+    )
+    caller = call_fn or (
+        lambda u, t, m, msgs, gt: _call_chat_completion(
+            u, t, m, msgs, gt, max_tokens=max_tokens, extra_headers=extra_headers
+        )
+    )
     sample = select_stratified_sample(dataset_path, limit_per_task=limit_per_task)
 
-    model_reports: list[dict[str, Any]] = []
-    for model in models:
+    def _eval_model(model: str) -> dict[str, Any]:
         per_task_scores: dict[str, list[float]] = {}
         latencies: list[float] = []
         boxed_hits = 0
@@ -247,21 +258,23 @@ def run_live_benchmark(
         p50 = lat_sorted[len(lat_sorted) // 2] if lat_sorted else 0.0
         p95 = lat_sorted[min(len(lat_sorted) - 1, int(len(lat_sorted) * 0.95))] if lat_sorted else 0.0
 
-        model_reports.append(
-            {
-                "model": model,
-                "backend": backend,
-                "evaluated_rows": len(sample),
-                "errors": errors,
-                "mean_reward": round(sum(all_scores) / len(all_scores), 4) if all_scores else 0.0,
-                "boxed_format_rate": round(boxed_hits / len(sample), 4) if sample else 0.0,
-                "latency_p50_ms": p50,
-                "latency_p95_ms": p95,
-                "task_means": {
-                    k: round(sum(v) / len(v), 4) for k, v in sorted(per_task_scores.items())
-                },
-            }
-        )
+        return {
+            "model": model,
+            "backend": backend,
+            "evaluated_rows": len(sample),
+            "errors": errors,
+            "mean_reward": round(sum(all_scores) / len(all_scores), 4) if all_scores else 0.0,
+            "boxed_format_rate": round(boxed_hits / len(sample), 4) if sample else 0.0,
+            "latency_p50_ms": p50,
+            "latency_p95_ms": p95,
+            "task_means": {
+                k: round(sum(v) / len(v), 4) for k, v in sorted(per_task_scores.items())
+            },
+        }
+
+    with ThreadPoolExecutor(max_workers=min(len(models), 6) or 1) as model_pool:
+        model_reports = list(model_pool.map(_eval_model, models))
+    model_reports.sort(key=lambda r: r["mean_reward"], reverse=True)
 
     return {
         "dataset": str(dataset_path),
@@ -296,9 +309,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--mode", choices=("oracle", "live"), default="oracle")
     ap.add_argument("--dataset", type=Path, default=Path("data/ontology_guard/grpo_eval.jsonl"))
     ap.add_argument("--backend", choices=("openrouter", "vllm", "vertex"), default="openrouter")
-    ap.add_argument("--models", default="google/gemini-3.1-flash-lite,z-ai/glm-5.3-flash")
+    ap.add_argument("--models", default="google/gemma-4-26b-a4b-it,thinkingmachines/inkling-2-mini,qwen/qwen3.8-flash")
     ap.add_argument("--limit-per-task", type=int, default=6)
-    ap.add_argument("--concurrency", type=int, default=4)
+    ap.add_argument("--concurrency", type=int, default=8)
+    ap.add_argument("--max-tokens", type=int, default=1536)
     ap.add_argument("--env-file", type=Path, default=None)
     ap.add_argument("--out-json", type=Path, default=None)
     ap.add_argument("--out-md", type=Path, default=None)
@@ -316,6 +330,7 @@ def main(argv: list[str] | None = None) -> int:
         models=model_list,
         limit_per_task=args.limit_per_task,
         concurrency=args.concurrency,
+        max_tokens=args.max_tokens,
         env_file=args.env_file,
     )
     if args.out_json:

@@ -1,0 +1,73 @@
+# Online / Environmental GRPO — Thinking Machines Lab Inkling-2-Mini (Nov 2026, 26.4B / 3.4B active MoE)
+# Also compatible with thinkingmachines/Inkling-2-Small (594B / 17B active) over frozen NVFP4/MXFP8 experts.
+# Launch vLLM adapter server (GPUs 2,3) then run trainer on GPUs 0,1:
+#   CUDA_VISIBLE_DEVICES=0,1 halo launch grpo/online configs/grpo-inkling2-mini-expert-lora.yaml -n 2
+
+# --- Model ---
+model_name_or_path: thinkingmachines/Inkling-2-Mini
+pad_token: "<|endoftext|>"
+
+# --- Parallelism & Quantized MoE Experts ---
+expert_parallel_size: 2
+frozen_quantized_experts: true
+moe_balancing: none
+
+# --- Expert + o_proj LoRA (keeps vision tower untouched) ---
+use_peft: true
+lora_r: 8
+lora_alpha: 16
+lora_dropout: 0.0
+lora_target_modules: [o_proj, gate_up_proj, down_proj]
+
+# --- Dataset ---
+dataset: data/ontology_guard/grpo_online.jsonl
+test_size: 0.05
+prompt_field: prompt
+answer_field: answer
+system_prompt: >-
+  Follow the schema instructions strictly. Output your final canonical decision JSON
+  wrapped inside \boxed{...} with sorted keys and no markdown commentary.
+
+# --- Rewards ---
+rewards:
+  - source: accuracy
+    weight: 1.0
+  - source: format
+    weight: 0.25
+    pattern: '\\boxed\{.+\}'
+  - source: whitecircle
+    name: ontology_safety
+    environment_id: your_environment_id
+    policies: [no_illegal_state_jump, enforce_hitl_escalation, require_high_impact_approval]
+    weight: 0.75
+    max_concurrency: 16
+
+# --- Rollout Adapter Sync & DAPO/GRPO ---
+rollout_adapter_sync: true
+rollout_adapter_dir: /mnt/adapters
+num_generations: 4
+beta: 0.0
+loss_type: dapo
+scale_rewards: batch
+use_chunked_grpo_logprobs: true
+packed_microbatch_tokens: 8192
+max_train_row_tokens: 4096
+loss_forward_importance_weights: true
+
+# --- Training ---
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 4
+num_train_epochs: 1.0
+learning_rate: 2.0e-05
+lr_scheduler_type: cosine
+warmup_steps: 10
+gradient_checkpointing_kwargs:
+  use_reentrant: true
+
+# --- Output ---
+output_dir: checkpoints/grpo-inkling2-mini-ontology
+save_steps: 100
+save_total_limit: 3
+logging_steps: 1
+logging_first_step: true
+log_phase_times: true
